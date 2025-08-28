@@ -1,11 +1,17 @@
 package com.fingerprint.dto.response;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+
+@NoArgsConstructor
+@Getter
+@Setter
 public class RegisterFingerPrintResponse {
-    private boolean success = false;
+    private boolean success ;
     private String message;
 
-    public RegisterFingerPrintResponse(String message) {
-        this.success = true;
-        this.message = message;
-    }
+
 }

@@ -13,7 +13,7 @@ import com.machinezoo.sourceafis.FingerprintImage;
 import com.machinezoo.sourceafis.FingerprintMatcher;
 import com.machinezoo.sourceafis.FingerprintTemplate;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Base64;
@@ -60,7 +60,11 @@ public class FingerPrintServiceImpl implements FingerPrintService {
         );
 
         fingerPrintRepository.save(entity);
-        return  new RegisterFingerPrintResponse("Fingerprint Registered successfully.");
+        RegisterFingerPrintResponse response = new RegisterFingerPrintResponse();
+        response.setMessage("Fingerprint Registered successfully.");
+        response.setSuccess(Boolean.TRUE);
+        return response;
+
     }
 
     private List<FingerprintTemplate> extractFingerprintTemplates(List<byte[]> imageBytesList) {
@@ -84,17 +88,17 @@ public class FingerPrintServiceImpl implements FingerPrintService {
     }
 
     private Finger verifyFinger(RegisterFingerPrintRequest request) {
-        Finger fingerEnum;
         try {
-            fingerEnum = Finger.valueOf(request.getFinger().toUpperCase());
-        } catch (FingerTypeDoesNotExistException e) {
+           Finger fingerEnum = Finger.valueOf(request.getFinger().toUpperCase());
+            fingerPrintRepository.findByUserIdAndFinger(request.getUserId(), fingerEnum)
+                    .ifPresent( fingerPrint -> {
+                        throw new FingerAlreadyRegisteredByUserException("This finger is already registered for this user.");
+                    });
+            return fingerEnum;
+        } catch (IllegalArgumentException  e) {
            throw new FingerTypeDoesNotExistException("Invalid finger type: " + request.getFinger());
         }
-        fingerPrintRepository.findByUserIdAndFinger(request.getUserId(), fingerEnum)
-                .ifPresent( _ -> {
-                   throw new FingerAlreadyRegisteredByUserException("This finger is already registered for this user.");
-               });
-        return fingerEnum;
+
         }
 
 
