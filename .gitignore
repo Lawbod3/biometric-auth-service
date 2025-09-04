@@ -28,3 +28,21 @@ bin/
 ### Mac OS ###
 .DS_Store.env
 app/target/
+
+# Build outputs
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+
+# Exclude application properties with secrets
+application.properties
+*.properties
