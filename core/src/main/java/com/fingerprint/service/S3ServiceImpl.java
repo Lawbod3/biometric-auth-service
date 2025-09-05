@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -35,7 +36,7 @@ public class S3ServiceImpl implements S3Service {
 
 
     @Override
-    public PreSignedResponse getPreSignedUrl(PreSignedUrlRequest request) {
+    public Optional<PreSignedResponse> getPreSignedUrl(PreSignedUrlRequest request) {
         PreSignedResponse preSignedResponse = new PreSignedResponse();
          verifyFinger(request);
         List<String> urls = IntStream.range(0,10)
@@ -56,7 +57,7 @@ public class S3ServiceImpl implements S3Service {
                 .toList();
         preSignedResponse.setPreSignedUrls(urls);
 
-      return preSignedResponse;
+      return Optional.of(preSignedResponse);
     }
 
     private void verifyFinger(PreSignedUrlRequest request) {
