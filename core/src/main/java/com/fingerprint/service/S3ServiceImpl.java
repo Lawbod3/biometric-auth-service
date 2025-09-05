@@ -1,6 +1,5 @@
 package com.fingerprint.service;
 
-import com.fingerprint.dto.request.PreSignedUrlRequest;
 import com.fingerprint.dto.response.PreSignedResponse;
 import com.fingerprint.exceptions.FingerAlreadyRegisteredByUserException;
 import com.fingerprint.exceptions.FingerTypeDoesNotExistException;
@@ -36,12 +35,12 @@ public class S3ServiceImpl implements S3Service {
 
 
     @Override
-    public Optional<PreSignedResponse> getPreSignedUrl(PreSignedUrlRequest request) {
+    public Optional<PreSignedResponse> getPreSignedUrl(String userId, String finger) {
         PreSignedResponse preSignedResponse = new PreSignedResponse();
-         verifyFinger(request);
+         verifyFinger(userId, finger);
         List<String> urls = IntStream.range(0,10)
                 .mapToObj(i ->{
-                    String key ="fingerprints/" + request.getUserId() + "/" + request.getFinger() + "/" + UUID.randomUUID() + ".png";
+                    String key ="fingerprints/" + userId + "/" + finger + "/" + UUID.randomUUID() + ".png";
                     PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                             .bucket(bucketName)
                             .key(key)
@@ -60,16 +59,16 @@ public class S3ServiceImpl implements S3Service {
       return Optional.of(preSignedResponse);
     }
 
-    private void verifyFinger(PreSignedUrlRequest request) {
+    private void verifyFinger(String userId, String finger) {
         try {
-            Finger fingerEnum = Finger.valueOf(request.getFinger().toUpperCase());
-            fingerPrintRepository.findByUserIdAndFinger(request.getUserId(), fingerEnum)
+            Finger fingerEnum = Finger.valueOf(finger.toUpperCase());
+            fingerPrintRepository.findByUserIdAndFinger(userId, fingerEnum)
                     .ifPresent( fingerPrint -> {
                         throw new FingerAlreadyRegisteredByUserException("This finger is already registered for this user.");
                     });
 
-        } catch (IllegalArgumentException  e) {
-            throw new FingerTypeDoesNotExistException("Invalid finger type: " + request.getFinger());
+        } catch (IllegalArgumentException | FingerTypeDoesNotExistException  e) {
+            throw new FingerTypeDoesNotExistException("Invalid finger type: " + finger);
         }
 
     }
