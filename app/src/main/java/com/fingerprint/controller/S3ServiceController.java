@@ -10,16 +10,18 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController("/api/Fingerprints")
+@RestController
+@RequestMapping("/api/Fingerprints")
 @AllArgsConstructor
 public class S3ServiceController {
 
     private final S3Service s3Service;
 
-    @GetMapping("getPreSignedUrl/")
+    @GetMapping("/getPreSignedUrl")
     public ResponseEntity<?> getPreSignedUrl(@RequestParam String userId, @RequestParam String finger) {
       try{
           PreSignedResponse response = s3Service.getPreSignedUrl(userId, finger)
