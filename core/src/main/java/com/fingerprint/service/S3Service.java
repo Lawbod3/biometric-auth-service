@@ -6,5 +6,5 @@ import java.util.Optional;
 
 
 public interface S3Service {
-  Optional<PreSignedResponse> getPreSignedUrl(String userId, String finger);
+  Optional<PreSignedResponse> generatePreSignedUrl(String userId, String finger);
 }

@@ -24,7 +24,7 @@ public class S3ServiceController {
     @GetMapping("/getPreSignedUrl")
     public ResponseEntity<?> getPreSignedUrl(@RequestParam String userId, @RequestParam String finger) {
       try{
-          PreSignedResponse response = s3Service.getPreSignedUrl(userId, finger)
+          PreSignedResponse response = s3Service.generatePreSignedUrl(userId, finger)
                   .orElseThrow(() -> new RuntimeException("Failed to generate pre-signed URLs"));
           return new ResponseEntity<>(new ApiResponse(true, response), HttpStatus.OK);
       }

@@ -8,8 +8,11 @@ import com.fingerprint.model.FingerPrintRecord;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import com.fingerprint.repositories.FingerPrintRepository;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -23,37 +26,40 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 
 @Service
-
+@Slf4j
 public class S3ServiceImpl implements S3Service {
     private final FingerPrintRepository fingerPrintRepository;
     private final S3Presigner s3Presigner;
+    private final S3Client s3Client;
+
     private final FingerPrintRecordRepository fingerPrintRecordRepository;
 
     @Value("${aws.s3.bucket.name}")
     private String bucketName;
 
-    public S3ServiceImpl(FingerPrintRepository fingerPrintRepository, S3Presigner s3Presigner, FingerPrintRecordRepository fingerPrintRecordRepository) {
+    public S3ServiceImpl(FingerPrintRepository fingerPrintRepository, S3Presigner s3Presigner, S3Client s3Client, FingerPrintRecordRepository fingerPrintRecordRepository) {
         this.fingerPrintRepository = fingerPrintRepository;
         this.s3Presigner = s3Presigner;
+        this.s3Client = s3Client;
         this.fingerPrintRecordRepository = fingerPrintRecordRepository;
     }
 
 
     @Override
-    public Optional<PreSignedResponse> getPreSignedUrl(String userId, String finger) {
+    public Optional<PreSignedResponse> generatePreSignedUrl(String userId, String finger) {
+        cleanupPendingUploads(userId,Finger.valueOf(finger));
         PreSignedResponse preSignedResponse = new PreSignedResponse();
          verifyFinger(userId, finger);
+        List<String> urls = getPreSignedUrl(userId, finger);
+        preSignedResponse.setPreSignedUrls(urls);
+      return Optional.of(preSignedResponse);
+    }
+
+    private List<String> getPreSignedUrl(String userId, String finger) {
         List<String> urls = IntStream.range(0,10)
                 .mapToObj(i ->{
                     String key ="fingerprints/" + userId + "/" + finger + "/" + UUID.randomUUID() + ".png";
-                    FingerPrintRecord record = new FingerPrintRecord();
-                    record.setUserId(userId);
-                    record.setS3Key(key);
-                    record.setFinger(Finger.valueOf(finger.toUpperCase()));
-                    record.setUploadStatus("PENDING");
-                    record.setCreatedAt(Instant.now());
-                    fingerPrintRecordRepository.save(record);
-
+                    saveFingerPrintRecord(userId, finger, key);
 
                     PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                             .bucket(bucketName)
@@ -68,9 +74,45 @@ public class S3ServiceImpl implements S3Service {
                     return s3Presigner.presignPutObject(preSignRequest).url().toString();
                 })
                 .toList();
-        preSignedResponse.setPreSignedUrls(urls);
-      return Optional.of(preSignedResponse);
+        return urls;
     }
+
+    private void saveFingerPrintRecord(String userId, String finger, String key) {
+        FingerPrintRecord record = new FingerPrintRecord();
+        record.setUserId(userId);
+        record.setS3Key(key);
+        record.setFinger(Finger.valueOf(finger.toUpperCase()));
+        record.setUploadStatus("PENDING");
+        record.setCreatedAt(Instant.now());
+        fingerPrintRecordRepository.save(record);
+    }
+
+    private void cleanupPendingUploads(String userId, Finger finger) {
+        fingerPrintRecordRepository
+                .findByUserIdAndFingerAndUploadStatus(userId, finger, "PENDING")
+                .stream()
+                .forEach(record -> {
+                    try {
+                        deleteObjectFromS3(record.getS3Key());
+                    } catch (Exception e) {
+                        log.debug("S3 object did not exist or could not be deleted: {}", record.getS3Key());
+                    }
+                    fingerPrintRecordRepository.delete(record);
+                });
+    }
+
+    private void deleteObjectFromS3(String s3Key) {
+        try {
+            DeleteObjectRequest request = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key).build();
+            s3Client.deleteObject(request);
+
+        }catch (Exception e) {
+            throw e;
+        }
+    }
+
 
     private void verifyFinger(String userId, String finger) {
         try {

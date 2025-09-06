@@ -13,9 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class S3ServiceTest {
     @Autowired
     private S3Service s3Service;
-
-
-
     private PreSignedResponse preSignedResponse;
 
 
@@ -24,14 +21,14 @@ public class S3ServiceTest {
     void  testS3Service() {
         String finger ="LEFT_LITTLE";
         String userId = "4567";
-        assertTrue( s3Service.getPreSignedUrl(userId, finger).isPresent());
+        assertTrue( s3Service.generatePreSignedUrl(userId, finger).isPresent());
     }
 
     @Test
     void  testS3ServiceThatPreSignedUrlsSizeIs10() {
         String finger ="LEFT_LITTLE";
         String userId = "4567";
-        preSignedResponse =  s3Service.getPreSignedUrl(userId, finger ).get();
+        preSignedResponse =  s3Service.generatePreSignedUrl(userId, finger ).get();
         assertEquals( 10, preSignedResponse.getPreSignedUrls().size());
     }
 
