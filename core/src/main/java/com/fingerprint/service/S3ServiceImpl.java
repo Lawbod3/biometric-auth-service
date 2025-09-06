@@ -47,7 +47,10 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public Optional<PreSignedResponse> generatePreSignedUrl(String userId, String finger) {
-        cleanupPendingUploads(userId,Finger.valueOf(finger));
+        cleanupPendingUploads(userId,Finger.valueOf(finger.toUpperCase()));
+        if (fingerPrintRecordRepository.existsByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()), "SUCCESS")) {
+            throw new FingerAlreadyRegisteredByUserException("Fingerprint already registered for this user");
+        }
         PreSignedResponse preSignedResponse = new PreSignedResponse();
          verifyFinger(userId, finger);
         List<String> urls = getPreSignedUrl(userId, finger);
@@ -101,7 +104,7 @@ public class S3ServiceImpl implements S3Service {
                 });
     }
 
-    private void deleteObjectFromS3(String s3Key) {
+    public void deleteObjectFromS3(String s3Key) {
         try {
             DeleteObjectRequest request = DeleteObjectRequest.builder()
                     .bucket(bucketName)

@@ -9,4 +9,6 @@ import java.util.List;
 @Setter
 public class PreSignedResponse {
     private List<String> preSignedUrls;
+
+
 }
