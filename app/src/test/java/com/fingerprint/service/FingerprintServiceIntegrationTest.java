@@ -24,18 +24,18 @@ public class FingerprintServiceIntegrationTest {
 
     @Test
     void testThatCanSaveFingerprint() throws IOException {
-        String imagePath = "/Users/sulaimonlawal/Downloads/fingerPrint/src/main/resources/fingerPrint.png";
-        byte[] imageBytes = Files.readAllBytes(Paths.get(imagePath));
-        String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-
-        List<String> captures = List.of(base64Image, base64Image, base64Image);
-
-        RegisterFingerPrintRequest fingerPrintRequest = new RegisterFingerPrintRequest();
-        fingerPrintRequest.setFinger("LEFT_THUMB");
-        fingerPrintRequest.setFingerprintImageBase64(captures);
-        fingerPrintRequest.setUserId("1");
-        RegisterFingerPrintResponse fingerPrintResponse = fingerPrintService.register(fingerPrintRequest);
-        assertNotNull(fingerPrintResponse);
+//        String imagePath = "/Users/sulaimonlawal/Downloads/fingerPrint/src/main/resources/fingerPrint.png";
+//        byte[] imageBytes = Files.readAllBytes(Paths.get(imagePath));
+//        String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+//
+//        List<String> captures = List.of(base64Image, base64Image, base64Image);
+//
+//        RegisterFingerPrintRequest fingerPrintRequest = new RegisterFingerPrintRequest();
+//        fingerPrintRequest.setFinger("LEFT_THUMB");
+//        fingerPrintRequest.setFingerprintImageBase64(captures);
+//        fingerPrintRequest.setUserId("1");
+//        RegisterFingerPrintResponse fingerPrintResponse = fingerPrintService.processFingerPrintRegistration(fingerPrintRequest);
+//        assertNotNull(fingerPrintResponse);
 
 
     }

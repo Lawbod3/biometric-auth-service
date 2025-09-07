@@ -2,14 +2,19 @@ package com.fingerprint.service;
 
 import com.fingerprint.dto.response.PreSignedResponse;
 import com.fingerprint.exceptions.FingerAlreadyRegisteredByUserException;
+import com.fingerprint.exceptions.FingerPrintRecordNotFound;
 import com.fingerprint.exceptions.FingerTypeDoesNotExistException;
 import com.fingerprint.model.Finger;
 import com.fingerprint.model.FingerPrintRecord;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import com.fingerprint.repositories.FingerPrintRepository;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -18,11 +23,13 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 @Service
@@ -30,19 +37,31 @@ import java.util.stream.IntStream;
 public class S3ServiceImpl implements S3Service {
     private final FingerPrintRepository fingerPrintRepository;
     private final S3Presigner s3Presigner;
+    private final FingerPrintService fingerPrintService;
     private final S3Client s3Client;
-
+    private final TaskExecutor taskExecutor;
     private final FingerPrintRecordRepository fingerPrintRecordRepository;
-
     @Value("${aws.s3.bucket.name}")
     private String bucketName;
 
-    public S3ServiceImpl(FingerPrintRepository fingerPrintRepository, S3Presigner s3Presigner, S3Client s3Client, FingerPrintRecordRepository fingerPrintRecordRepository) {
+    @Autowired
+    public S3ServiceImpl(
+            FingerPrintRepository fingerPrintRepository,
+            S3Presigner s3Presigner,
+            @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
+            FingerPrintService fingerPrintService,
+            S3Client s3Client,
+            FingerPrintRecordRepository fingerPrintRecordRepository
+    ) {
         this.fingerPrintRepository = fingerPrintRepository;
         this.s3Presigner = s3Presigner;
+        this.taskExecutor = taskExecutor;
+        this.fingerPrintService = fingerPrintService;
         this.s3Client = s3Client;
         this.fingerPrintRecordRepository = fingerPrintRecordRepository;
     }
+
+
 
 
     @Override
@@ -57,6 +76,7 @@ public class S3ServiceImpl implements S3Service {
         preSignedResponse.setPreSignedUrls(urls);
       return Optional.of(preSignedResponse);
     }
+
 
     private List<String> getPreSignedUrl(String userId, String finger) {
         List<String> urls = IntStream.range(0,10)
@@ -130,4 +150,46 @@ public class S3ServiceImpl implements S3Service {
         }
 
     }
+
+    @Override
+    public void confirmSuccessfulUpload(String userId, String finger) {
+        verifyFinger(userId, finger);
+       List<FingerPrintRecord>  records = fingerPrintRecordRepository
+                .findByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()),  "PENDING");
+        if (records.isEmpty()) {
+            throw new FingerPrintRecordNotFound("No pending records");
+        }
+
+        List<FingerPrintRecord>updatedRecords = records.stream()
+                .map(eachRecord->{
+                    eachRecord.setUploadStatus("SUCCESS");
+                    eachRecord.setUploadedAt(Instant.now());
+                    return fingerPrintRecordRepository.save(eachRecord);
+                })
+                .toList();
+        triggerAsyncRegistration(userId,finger, updatedRecords);
+    }
+
+    private void triggerAsyncRegistration(String userId, String finger, List<FingerPrintRecord> fingerPrintRecords) {
+            taskExecutor.execute(() ->{
+                try{
+                    fingerPrintService.processFingerPrintRegistration(userId, finger, fingerPrintRecords);
+
+                } catch (Exception e) {
+                    log.error("Async registration failed for user: {}, finger: {}", userId, finger, e);
+                    updateRecordsStatus(fingerPrintRecords, "REGISTRATION_FAILED");
+                }
+            });
+
+    }
+
+    private void updateRecordsStatus(List<FingerPrintRecord> records, String status) {
+        records.forEach(eachRecord -> {
+            eachRecord.setUploadStatus(status);
+            fingerPrintRecordRepository.save(eachRecord);
+        });
+    }
+
+
+
 }
