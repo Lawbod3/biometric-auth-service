@@ -1,5 +1,6 @@
 package com.fingerprint.service;
 
+import com.fingerprint.model.Status;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ public class UploadCleanupService {
         log.info("Running cleanup job for abandoned uploads...");
         Instant oneHourAgo = Instant.now().minus(1, ChronoUnit.HOURS);
         long deletedCount = fingerprintRecordRepository.
-                findByUploadStatusAndCreatedAtBefore("PENDING", oneHourAgo)
+                findByUploadStatusAndCreatedAtBefore(Status.PENDING, oneHourAgo)
                 .stream()
                 .map(record -> {
                     try {

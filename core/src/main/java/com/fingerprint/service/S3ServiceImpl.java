@@ -6,6 +6,7 @@ import com.fingerprint.exceptions.FingerPrintRecordNotFound;
 import com.fingerprint.exceptions.FingerTypeDoesNotExistException;
 import com.fingerprint.model.Finger;
 import com.fingerprint.model.FingerPrintRecord;
+import com.fingerprint.model.Status;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import com.fingerprint.repositories.FingerPrintRepository;
 
@@ -67,7 +68,7 @@ public class S3ServiceImpl implements S3Service {
     @Override
     public Optional<PreSignedResponse> generatePreSignedUrl(String userId, String finger) {
         cleanupPendingUploads(userId,Finger.valueOf(finger.toUpperCase()));
-        if (fingerPrintRecordRepository.existsByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()), "SUCCESS")) {
+        if (fingerPrintRecordRepository.existsByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()), Status.PENDING)) {
             throw new FingerAlreadyRegisteredByUserException("Fingerprint already registered for this user");
         }
         PreSignedResponse preSignedResponse = new PreSignedResponse();
@@ -105,14 +106,14 @@ public class S3ServiceImpl implements S3Service {
         record.setUserId(userId);
         record.setS3Key(key);
         record.setFinger(Finger.valueOf(finger.toUpperCase()));
-        record.setUploadStatus("PENDING");
+        record.setUploadStatus(Status.PENDING);
         record.setCreatedAt(Instant.now());
         fingerPrintRecordRepository.save(record);
     }
 
     private void cleanupPendingUploads(String userId, Finger finger) {
         fingerPrintRecordRepository
-                .findByUserIdAndFingerAndUploadStatus(userId, finger, "PENDING")
+                .findByUserIdAndFingerAndUploadStatus(userId, finger, Status.PENDING)
                 .stream()
                 .forEach(record -> {
                     try {
@@ -155,14 +156,14 @@ public class S3ServiceImpl implements S3Service {
     public void confirmSuccessfulUpload(String userId, String finger) {
         verifyFinger(userId, finger);
        List<FingerPrintRecord>  records = fingerPrintRecordRepository
-                .findByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()),  "PENDING");
+                .findByUserIdAndFingerAndUploadStatus(userId, Finger.valueOf(finger.toUpperCase()),  Status.PENDING);
         if (records.isEmpty()) {
             throw new FingerPrintRecordNotFound("No pending records");
         }
 
         List<FingerPrintRecord>updatedRecords = records.stream()
                 .map(eachRecord->{
-                    eachRecord.setUploadStatus("SUCCESS");
+                    eachRecord.setUploadStatus(Status.SUCCESS);
                     eachRecord.setUploadedAt(Instant.now());
                     return fingerPrintRecordRepository.save(eachRecord);
                 })
@@ -177,13 +178,13 @@ public class S3ServiceImpl implements S3Service {
 
                 } catch (Exception e) {
                     log.error("Async registration failed for user: {}, finger: {}", userId, finger, e);
-                    updateRecordsStatus(fingerPrintRecords, "REGISTRATION_FAILED");
+                    updateRecordsStatus(fingerPrintRecords, Status.FAILED);
                 }
             });
 
     }
 
-    private void updateRecordsStatus(List<FingerPrintRecord> records, String status) {
+    private void updateRecordsStatus(List<FingerPrintRecord> records, Status status) {
         records.forEach(eachRecord -> {
             eachRecord.setUploadStatus(status);
             fingerPrintRecordRepository.save(eachRecord);

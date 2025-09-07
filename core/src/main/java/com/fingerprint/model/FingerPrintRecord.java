@@ -27,7 +27,7 @@ public class FingerPrintRecord {
     @Column(nullable = false)
     private Finger finger;
 
-    private String uploadStatus;
+    private Status uploadStatus;
 
     private Instant uploadedAt;
     private Instant createdAt;

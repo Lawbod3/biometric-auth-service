@@ -7,6 +7,7 @@ import com.fingerprint.exceptions.FingerAlreadyRegisteredByUserException;
 import com.fingerprint.exceptions.FingerAlreadyRegisteredException;
 import com.fingerprint.exceptions.FingerTypeDoesNotExistException;
 import com.fingerprint.model.Finger;
+import com.fingerprint.model.Status;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import com.fingerprint.service.FingerPrintService;
 import lombok.AllArgsConstructor;
@@ -37,7 +38,7 @@ public class FingerprintControllers {
     )
     public ResponseEntity<?> register(@RequestParam String userId, @RequestParam String finger) {
         try{
-           String status = fingerPrintRecordRepository.findByUserIdAndFinger(userId, Finger.valueOf(finger));
+           Status status = fingerPrintRecordRepository.findByUserIdAndFinger(userId, Finger.valueOf(finger));
             return new ResponseEntity<>(new ApiResponse(true, status), HttpStatus.OK);
 
         }

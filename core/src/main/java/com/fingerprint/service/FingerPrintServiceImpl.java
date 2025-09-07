@@ -9,6 +9,7 @@ import com.fingerprint.exceptions.S3DownloadFailed;
 import com.fingerprint.model.Finger;
 import com.fingerprint.model.FingerPrint;
 import com.fingerprint.model.FingerPrintRecord;
+import com.fingerprint.model.Status;
 import com.fingerprint.repositories.FingerPrintRecordRepository;
 import com.fingerprint.repositories.FingerPrintRepository;
 import com.machinezoo.sourceafis.FingerprintImage;
@@ -151,7 +152,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
 
     private void updateTemporaryRecords(List<FingerPrintRecord> records) {
         records.forEach(record -> {
-            record.setUploadStatus("PROCESSED");
+            record.setUploadStatus(Status.PROCESSED);
             record.setUploadedAt(Instant.now());
             fingerPrintRecordRepository.save(record);
         });
