@@ -9,10 +9,7 @@ import com.fingerprint.service.S3Service;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/Fingerprints")
@@ -33,6 +30,21 @@ public class S3ServiceController {
       }catch (Exception e) {
           return new ResponseEntity<>(new ApiResponse(false, "Something went wrong"), HttpStatus.INTERNAL_SERVER_ERROR);
       }
+
+    }
+
+    @PostMapping
+    public ResponseEntity<?> confirmImageUploadOnS3(@RequestParam String userId, @RequestParam String finger){
+        try{
+            s3Service.confirmSuccessfulUpload(userId, finger);
+            return ResponseEntity.ok(new ApiResponse(true,
+                    "Upload confirmed and registration processing started"));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse(false, "Failed to confirm upload: " + e.getMessage()));
+        }
+
 
     }
 

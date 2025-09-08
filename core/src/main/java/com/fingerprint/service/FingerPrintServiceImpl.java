@@ -40,7 +40,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
 
 
     @Override
-    public RegisterFingerPrintResponse processFingerPrintRegistration(String userId, String finger, List<FingerPrintRecord> records) {
+    public void processFingerPrintRegistration(String userId, String finger, List<FingerPrintRecord> records) {
         try {
             Finger fingerEnum = verifyFinger(userId, finger.toUpperCase());
             List<byte[]> imageBytesList = downloadImagesFromS3(records);
@@ -52,7 +52,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
             updateTemporaryRecords(records);
 
             log.info("Successfully registered fingerprint for user: {}, finger: {}", userId, finger);
-            return createSuccessResponse();
+            //return createSuccessResponse();
 
 
         } catch (Exception e) {
@@ -60,14 +60,15 @@ public class FingerPrintServiceImpl implements FingerPrintService {
             throw e;
         }
 
+
     }
 
-    private  RegisterFingerPrintResponse createSuccessResponse() {
-        RegisterFingerPrintResponse response = new RegisterFingerPrintResponse();
-        response.setMessage("Fingerprint Registered successfully.");
-        response.setSuccess(Boolean.TRUE);
-        return response;
-    }
+//    private  RegisterFingerPrintResponse createSuccessResponse() {
+//        RegisterFingerPrintResponse response = new RegisterFingerPrintResponse();
+//        response.setMessage("Fingerprint Registered successfully.");
+//        response.setSuccess(Boolean.TRUE);
+//        return response;
+//    }
 
     private  FingerPrint createFingerPrintEntity(String userId, Finger fingerEnum, List<FingerprintTemplate> extractedTemplates) {
         FingerPrint entity = new FingerPrint();
@@ -152,7 +153,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
 
     private void updateTemporaryRecords(List<FingerPrintRecord> records) {
         records.forEach(record -> {
-            record.setUploadStatus(Status.PROCESSED);
+            record.setUploadStatus(Status.REGISTERED);
             record.setUploadedAt(Instant.now());
             fingerPrintRecordRepository.save(record);
         });

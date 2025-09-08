@@ -49,7 +49,7 @@ public class S3ServiceImpl implements S3Service {
     public S3ServiceImpl(
             FingerPrintRepository fingerPrintRepository,
             S3Presigner s3Presigner,
-            @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
+            TaskExecutor taskExecutor,
             FingerPrintService fingerPrintService,
             S3Client s3Client,
             FingerPrintRecordRepository fingerPrintRecordRepository

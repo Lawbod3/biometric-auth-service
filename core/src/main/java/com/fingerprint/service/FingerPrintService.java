@@ -8,5 +8,5 @@ import com.fingerprint.model.FingerPrintRecord;
 import java.util.List;
 
 public interface FingerPrintService {
-    RegisterFingerPrintResponse processFingerPrintRegistration(String userId, String finger, List<FingerPrintRecord> records);
+    void processFingerPrintRegistration(String userId, String finger, List<FingerPrintRecord> records);
 }
