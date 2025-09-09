@@ -35,6 +35,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
     private final FingerPrintRepository fingerPrintRepository;
     private final S3Client s3Client;
     private final FingerPrintRecordRepository fingerPrintRecordRepository;
+    private final TemplateExtractor templateExtractor;
     @Value("${aws.s3.bucket.name}")
     private String bucketName;
 
@@ -44,7 +45,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
         try {
             Finger fingerEnum = verifyFinger(userId, finger.toUpperCase());
             List<byte[]> imageBytesList = downloadImagesFromS3(records);
-            List<FingerprintTemplate> extractedTemplates = extractFingerprintTemplates(imageBytesList);
+            List<com.machinezoo.sourceafis.FingerprintTemplate> extractedTemplates= templateExtractor.extractTemplates(imageBytesList);
             checkForDuplicateTemplatesAmongAllTemplates(extractedTemplates);
 
             FingerPrint entity = createFingerPrintEntity(userId, fingerEnum, extractedTemplates);
@@ -82,7 +83,7 @@ public class FingerPrintServiceImpl implements FingerPrintService {
         return entity;
     }
 
-    private  void checkForDuplicateTemplatesAmongAllTemplates(List<FingerprintTemplate> extractedTemplates) {
+   protected void checkForDuplicateTemplatesAmongAllTemplates(List<FingerprintTemplate> extractedTemplates) {
         List<FingerPrint> allFingerprints = fingerPrintRepository.findAll();
         for (FingerprintTemplate probeTemplate : extractedTemplates) {
             FingerprintMatcher matcher = new FingerprintMatcher(probeTemplate);
@@ -103,16 +104,16 @@ public class FingerPrintServiceImpl implements FingerPrintService {
         }
     }
 
-    private List<FingerprintTemplate> extractFingerprintTemplates(List<byte[]> imageBytesList) {
-       List<FingerprintTemplate> extractedTemplates = imageBytesList.stream()
-                .map(bytes -> new FingerprintTemplate(
-                       new FingerprintImage()
-                               .dpi(500)
-                               .decode(bytes)
-               ))
-               .toList();
-       return extractedTemplates;
-   }
+//    private List<FingerprintTemplate> extractFingerprintTemplates(List<byte[]> imageBytesList) {
+//       List<FingerprintTemplate> extractedTemplates = imageBytesList.stream()
+//                .map(bytes -> new FingerprintTemplate(
+//                       new FingerprintImage()
+//                               .dpi(500)
+//                               .decode(bytes)
+//               ))
+//               .toList();
+//       return extractedTemplates;
+//   }
 
    private List<byte[]> downloadImagesFromS3(List<FingerPrintRecord> records) {
         return  records.stream()
